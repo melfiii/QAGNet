@@ -22,7 +22,7 @@ import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_, constant_
 
 from ..functions import MSDeformAttnFunction
-from ..functions.ms_deform_attn_func import ms_deform_attn_core_pytorch
+from ..functions.ms_deform_attn_func import ms_deform_attn_cpu_fallback
 
 
 def _is_power_of_2(n):
@@ -118,7 +118,7 @@ class MSDeformAttn(nn.Module):
                 value, input_spatial_shapes, input_level_start_index, sampling_locations, attention_weights, self.im2col_step)
         except:
             # CPU
-            output = ms_deform_attn_core_pytorch(value, input_spatial_shapes, sampling_locations, attention_weights)
+            output = ms_deform_attn_cpu_fallback(value, input_spatial_shapes, sampling_locations, attention_weights)
         # # For FLOPs calculation only
         # output = ms_deform_attn_core_pytorch(value, input_spatial_shapes, sampling_locations, attention_weights)
         output = self.output_proj(output)

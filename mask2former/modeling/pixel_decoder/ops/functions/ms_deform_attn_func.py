@@ -18,20 +18,30 @@ import torch.nn.functional as F
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 
+info_string = (
+    "\n\nPlease compile MultiScaleDeformableAttention CUDA op with the following commands:\n"
+    "\t`cd mask2former/modeling/pixel_decoder/ops`\n"
+    "\t`sh make.sh`\n"
+)
+
 try:
     import MultiScaleDeformableAttention as MSDA
-except ModuleNotFoundError as e:
-    info_string = (
-        "\n\nPlease compile MultiScaleDeformableAttention CUDA op with the following commands:\n"
-        "\t`cd mask2former/modeling/pixel_decoder/ops`\n"
-        "\t`sh make.sh`\n"
-    )
-    raise ModuleNotFoundError(info_string)
+except ModuleNotFoundError:
+    MSDA = None
+
+try:
+    from mmcv.ops.multi_scale_deform_attn import multi_scale_deformable_attn_pytorch as _mmcv_ms_deform_attn
+except Exception:
+    _mmcv_ms_deform_attn = None
 
 
 class MSDeformAttnFunction(Function):
     @staticmethod
     def forward(ctx, value, value_spatial_shapes, value_level_start_index, sampling_locations, attention_weights, im2col_step):
+        if not value.is_cuda:
+            raise RuntimeError("MSDeformAttnFunction only supports CUDA. Use ms_deform_attn_core_pytorch for CPU.")
+        if MSDA is None:
+            raise ModuleNotFoundError(info_string)
         ctx.im2col_step = im2col_step
         output = MSDA.ms_deform_attn_forward(
             value, value_spatial_shapes, value_level_start_index, sampling_locations, attention_weights, ctx.im2col_step)
@@ -41,6 +51,8 @@ class MSDeformAttnFunction(Function):
     @staticmethod
     @once_differentiable
     def backward(ctx, grad_output):
+        if MSDA is None:
+            raise ModuleNotFoundError(info_string)
         value, value_spatial_shapes, value_level_start_index, sampling_locations, attention_weights = ctx.saved_tensors
         grad_value, grad_sampling_loc, grad_attn_weight = \
             MSDA.ms_deform_attn_backward(
@@ -70,3 +82,9 @@ def ms_deform_attn_core_pytorch(value, value_spatial_shapes, sampling_locations,
     attention_weights = attention_weights.transpose(1, 2).reshape(N_*M_, 1, Lq_, L_*P_)
     output = (torch.stack(sampling_value_list, dim=-2).flatten(-2) * attention_weights).sum(-1).view(N_, M_*D_, Lq_)
     return output.transpose(1, 2).contiguous()
+
+
+def ms_deform_attn_cpu_fallback(value, value_spatial_shapes, sampling_locations, attention_weights):
+    if _mmcv_ms_deform_attn is not None:
+        return _mmcv_ms_deform_attn(value, value_spatial_shapes, sampling_locations, attention_weights)
+    return ms_deform_attn_core_pytorch(value, value_spatial_shapes, sampling_locations, attention_weights)

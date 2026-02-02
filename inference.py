@@ -108,6 +108,7 @@ def inference(cfg, model,model_name,model_root_dir,datasetmode):
         if not os.path.exists(saliencymapPath):
             os.makedirs(saliencymapPath)
 
+        processed_images = []  # Track processed image names for evaluation
         with inference_context(model), torch.no_grad():
             res = []
             for idx, inputs in enumerate(dataloader):
@@ -116,10 +117,21 @@ def inference(cfg, model,model_name,model_root_dir,datasetmode):
                 img_width = inputs[0]["width"]
                 if "instances" in predictions[-1]:
                     instances = predictions[-1]["instances"].to("cpu")
+                    image_id = inputs[0]['image_id'] if 'image_id' in inputs[0] else f"img_{idx}"
+                    
+                    print(f"\n🔍 === IMAGE {idx}: {image_id} ===")
+                    print(f"   📊 Total instances detected: {len(instances)}")
+                    print(f"   🎯 Available attributes: {dir(instances[0]) if len(instances) > 0 else 'N/A'}")
+                    
                     pred_instances = Instances(instances.image_size)
                     flag = False
                     for index in range(len(instances)):
-                        score = instances[index].scores
+                        score = instances[index].scores.item() if hasattr(instances[index].scores, 'item') else float(instances[index].scores)
+                        rank = instances[index].pred_rank.item() if hasattr(instances[index].pred_rank, 'item') else float(instances[index].pred_rank)
+                        mask_shape = instances[index].pred_masks.shape
+                        
+                        print(f"   ✓ Objekt {index}: Score={score:.4f}, Rank={rank:.4f}, Maske={mask_shape}, Threshold={cfg.EVALUATION.RESULT_THRESHOLD}")
+                        
                         if score > cfg.EVALUATION.RESULT_THRESHOLD:
                             if flag == False:
                                 pred_instances = instances[index]
@@ -138,6 +150,7 @@ def inference(cfg, model,model_name,model_root_dir,datasetmode):
                     gt_masks = convert_coco_poly_to_mask(gt_masks_polygon, img_height, img_width).cpu().data.numpy()
 
                     name = inputs[0]["file_name"].split('/')[-1]
+                    processed_images.append(name[:-4])  # Store image ID without extension
 
                     if flag:
                         pred_masks = pred_instances.pred_masks.cpu().data.numpy()
@@ -174,7 +187,7 @@ def inference(cfg, model,model_name,model_root_dir,datasetmode):
                         res.append({'gt_masks': [mask for mask in gt_masks], 'segmaps': pred_masks, 'gt_ranks': gt_ranks,'rank_scores': [rank for rank in pred_ranks], 'img_name': name})
 
                         saliency_rank = [rank for rank in pred_ranks]
-                        all_segmaps = np.zeros_like(gt_masks[0], dtype=np.float)
+                        all_segmaps = np.zeros_like(gt_masks[0], dtype=float)
                         segmaps1 = copy.deepcopy(pred_masks)
                         if len(pred_masks) != 0:
                             color_index = [sorted(saliency_rank).index(a) + 1 for a in saliency_rank]
@@ -200,7 +213,7 @@ def inference(cfg, model,model_name,model_root_dir,datasetmode):
                                         seg[cover_region] = 0
                                         all_segmaps += seg
                                         cover_region = all_segmaps != 0
-                            all_segmaps = all_segmaps.astype(np.int)
+                            all_segmaps = all_segmaps.astype(int)
 
                             cv2.imwrite(saliencymapPath + '{}.png'.format(name[:-4]), all_segmaps)
                     else:
@@ -212,7 +225,7 @@ def inference(cfg, model,model_name,model_root_dir,datasetmode):
 
             if comm.is_main_process():
                 r_corre = rank_evalu(res, 0.5)
-                mae, avg_spr_norm, image_used=doOffcialSorInference(SOR_DATASETPATH,saliencymapPath,dataset,datasetmode)
+                mae, avg_spr_norm, image_used=doOffcialSorInference(SOR_DATASETPATH,saliencymapPath,dataset,datasetmode,processed_images)
                 f_m = mf_evalu(res)
                 with open(ourputdir+f"{model_name.split('.')[0]}_{datasetmode}metricsresult_Thres{cfg.EVALUATION.RESULT_THRESHOLD}.txt", "a") as f:
                     f.write('\n------------\n')

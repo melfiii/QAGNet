@@ -1,29 +1,43 @@
-*.png
-*.json
-*.diff
-*.jpg
-
-# compilation and distribution
-__pycache__
-_ext
+# Python cache
+__pycache__/
 *.pyc
 *.pyd
-*.so
-*.dll
+*.pyo
 *.egg-info/
+_ext/
 build/
 dist/
 wheels/
 
-# pytorch/python/numpy formats
+# Virtual environments
+.venv/
+.venv_qagnet/
+venv/
+env/
+
+# Model files (large)
 *.pth
 *.pkl
-*.npy
-*.ts
+PreTrained_Models/
 
-# ipython/jupyter notebooks
+# Datasets (large)
+datasets/
+*.jpg
+*.png
+*.json
+
+# Results and outputs (generated)
+evaluationResult/
+output/
+*.diff
+
+# Notebooks (optional - remove if you want to commit)
 *.ipynb
 **/.ipynb_checkpoints/
+
+# PyTorch formats
+*.npy
+*.ts
 
 # Editor temporaries
 *.swn
@@ -31,6 +45,10 @@ wheels/
 *.swp
 *~
 
-# editor settings
-.idea
-.vscode
+# Editor settings
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

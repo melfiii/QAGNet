@@ -478,8 +478,9 @@ def calculate_spr(dataset, model_pred_data_path,datasetname):
 
                 vals = pred_seg[pred_pix_loc[0], pred_pix_loc[1]]
 
-                mode = sc.mode(vals)[0][0]
-                r = mode
+                mode_result = sc.mode(vals, keepdims=True)
+                if mode_result[0].size > 0:
+                    r = mode_result[0][0]
 
             pred_ranks.append(r)
 
@@ -639,7 +640,7 @@ def doOffcialSor(data_root, generatedMapPath,datasetname):
 
     return mae, avg_spr_norm, image_used
 
-def doOffcialSorInference(data_root, generatedMapPath,datasetname,datasetmode):
+def doOffcialSorInference(data_root, generatedMapPath,datasetname,datasetmode,processed_images=None):
     print("Evaluate-do official SOR")
     DATASET_ROOT = data_root  # Change to your location
     data_split = datasetmode
@@ -650,6 +651,9 @@ def doOffcialSorInference(data_root, generatedMapPath,datasetname,datasetmode):
     elif datasetname=='sifr':
         dataset=DatasetTestSIFR(DATASET_ROOT, data_split, eval_spr=True)
 
+    # Limit dataset to processed images if specified
+    if processed_images is not None:
+        dataset.img_ids = [img_id for img_id in dataset.img_ids if img_id in processed_images]
 
 
     ####################################################

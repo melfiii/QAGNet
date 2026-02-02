@@ -519,21 +519,22 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         r_ins = torch.mean(r_sg_all_level, dim=1)
 
         # adj matrix
-        adj_n2n = torch.eye(num_ins)
-        adj_n2n = (adj_n2n.repeat(3, 3)).to("cuda")
+        device = query_fea[0].device
+        adj_n2n = torch.eye(num_ins, device=device)
+        adj_n2n = adj_n2n.repeat(3, 3)
 
-        adj_n2r = torch.eye(num_ins * 3, num_ins * 3)
-        m = torch.zeros(num_ins, num_ins).repeat(3, 1)
+        adj_n2r = torch.eye(num_ins * 3, num_ins * 3, device=device)
+        m = torch.zeros(num_ins, num_ins, device=device).repeat(3, 1)
         adj_n2r = torch.cat([adj_n2r, m], dim=1)
-        md = torch.eye(num_ins).repeat(1, 4)
-        adj_n2r = torch.cat([adj_n2r, md], dim=0).to("cuda")
+        md = torch.eye(num_ins, device=device).repeat(1, 4)
+        adj_n2r = torch.cat([adj_n2r, md], dim=0)
 
 
-        adj_r2n = torch.eye(num_ins * 4, num_ins * 3)
-        m = torch.eye(num_ins).repeat(4, 1)
-        adj_r2n = torch.cat([adj_r2n, m], dim=1).to("cuda")
+        adj_r2n = torch.eye(num_ins * 4, num_ins * 3, device=device)
+        m = torch.eye(num_ins, device=device).repeat(4, 1)
+        adj_r2n = torch.cat([adj_r2n, m], dim=1)
 
-        adj_multi_ins = torch.ones(num_ins, num_ins).to("cuda")
+        adj_multi_ins = torch.ones(num_ins, num_ins, device=device)
         if self.siderankloss:
             side_rank_score=[]
 

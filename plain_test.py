@@ -32,6 +32,7 @@ import detectron2.utils.comm as comm
 logger = logging.getLogger("detectron2")
 
 from torch.utils.tensorboard import SummaryWriter
+import torch
 
 def setup(args):
     """
@@ -102,6 +103,12 @@ if __name__ == "__main__":
     #args.config_file = '/home/psxbd1/project/QAGNet/configs/coco/instance-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml'
 
     args.resume = False
+    if not torch.cuda.is_available():
+        args.opts = list(args.opts) + ["MODEL.DEVICE", "cpu"]
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    local_dataset_root = os.path.join(project_root, "datasets")
+    if os.path.isdir(os.path.join(local_dataset_root, "SIFR")):
+        args.opts = list(args.opts) + ["EVALUATION.DATAPATH", local_dataset_root + os.sep]
     print("Command Line Args:", args)
     launch(
         main,
