@@ -1,10 +1,10 @@
-# Python cache
+# Python
 __pycache__/
 *.pyc
 *.pyd
 *.pyo
-*.egg-info/
 _ext/
+*.egg-info/
 build/
 dist/
 wheels/
@@ -15,40 +15,33 @@ wheels/
 venv/
 env/
 
-# Model files (large)
+# Models & datasets (large files)
 *.pth
 *.pkl
 PreTrained_Models/
-
-# Datasets (large)
 datasets/
 *.jpg
 *.png
-*.json
 
-# Results and outputs (generated)
+# Results (generated)
 evaluationResult/
 output/
 *.diff
+*.json
 
-# Notebooks (optional - remove if you want to commit)
+# Notebooks
 *.ipynb
 **/.ipynb_checkpoints/
 
-# PyTorch formats
+# PyTorch
 *.npy
 *.ts
 
-# Editor temporaries
+# Editor
 *.swn
 *.swo
 *.swp
 *~
-
-# Editor settings
 .idea/
 .vscode/
-
-# OS files
 .DS_Store
-Thumbs.db
